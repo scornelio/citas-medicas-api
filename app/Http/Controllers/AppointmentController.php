@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Appointment;
+use App\Factories\AppointmentFactory;
 
 /**
  * @OA\Info(
@@ -31,6 +31,13 @@ use App\Models\Appointment;
  */
 class AppointmentController extends Controller
 {
+    protected $appointmentFactory;
+
+    public function __construct()
+    {
+        $this->appointmentFactory = AppointmentFactory::make();
+    }
+
     /**
      * @OA\Get(
      *     path="/api/appointments",
@@ -59,20 +66,24 @@ class AppointmentController extends Controller
      */
     public function index()
     {
-        $appointments = Appointment::all();
-        if(count($appointments) > 0) {
-            $data = [
-                'data' => $appointments,
-                'message' => 'Citas encontradas'
-            ];
-            return response()->json($data, 200);
-        }
+        try {
+            $appointments = $this->appointmentFactory->all();
+            if (count($appointments) > 0) {
+                $data = [
+                    'data' => $appointments,
+                    'message' => 'Citas encontradas'
+                ];
+                return response()->json($data, 200);
+            }
 
-        $data = [
-            'data' => null,
-            'message' => 'No hay citas registradas'
-        ];
-        return response()->json($data, 204);
+            return response()->noContent();
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Error fetching appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error en Base de Datos'], 500);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error'], 500);
+        }
     }
 
     /**
@@ -110,20 +121,28 @@ class AppointmentController extends Controller
      */
     public function show($id)
     {
-        $appointment = Appointment::find($id);
-        if ($appointment) {
-            $data = [
-                'data' => $appointment,
-                'message' => 'Cita encontrada',
-            ];
-            return response()->json($data, 200);
-        } else {
-            $data = [
-                'data' => null,
-                'message' => 'Cita no encontrada',
-            ];
-            return response()->json($data, 404);
-        }
+        try{
+            $appointment = $this->appointmentFactory->find($id);
+            if ($appointment) {
+                $data = [
+                    'data' => $appointment,
+                    'message' => 'Cita encontrada',
+                ];
+                return response()->json($data, 200);
+            } else {
+                $data = [
+                    'data' => null,
+                    'message' => 'Cita no encontrada',
+                ];
+                return response()->json($data, 404);
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error en Base de Datos'], 500);
+        } catch (\Exception $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error'], 500);
+        }    
     }
 
     /**
@@ -158,27 +177,36 @@ class AppointmentController extends Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'patient_name' => 'required|string|max:255',
-            'doctor_name' => 'required|string|max:255',
-            'appointment_date' => 'required|date',
-            'status' => 'required|string|in:scheduled,completed,cancelled',
-        ]);
-
-        $appointment = Appointment::create($validatedData);
-        if ($appointment) {
-            $data = [
-                'data' => $appointment,
-                'message' => 'Creado correctamente',
-            ];
-            return response()->json($data, 201);
-        } else {
-            $data = [
-                'data' => null,
-                'message' => 'Error al crear',
-            ];
-            return response()->json($data, 500);
-        }
+        try{
+            $validatedData = $request->validate([
+                'patient_name' => 'required|string|max:255',
+                'doctor_name' => 'required|string|max:255',
+                'appointment_date' => 'required|date',
+                'status' => 'required|string|in:scheduled,completed,cancelled',
+            ]);
+    
+            $appointment = $this->appointmentFactory->create($validatedData);
+            if ($appointment) {
+                $data = [
+                    'data' => $appointment,
+                    'message' => 'Creado correctamente',
+                ];
+                return response()->json($data, 201);
+            } else {
+                $data = [
+                    'data' => null,
+                    'message' => 'Error al crear',
+                ];
+                return response()->json($data, 500);
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error en Base de Datos'], 500);
+        } catch (\Exception $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error'], 500);
+        } 
+        
     }
 
     /**
@@ -228,36 +256,35 @@ class AppointmentController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $appointment = Appointment::find($id);
-        if (!$appointment) {
-            $data = [
-                'data' => null,
-                'message' => 'Cita no encontrada',
-            ];
-            return response()->json($data, 404);
-        }
-
-        $validatedData = $request->validate([
-            'patient_name' => 'sometimes|required|string|max:255',
-            'doctor_name' => 'sometimes|required|string|max:255',
-            'appointment_date' => 'sometimes|required|date',
-            'status' => 'sometimes|required|string|in:scheduled,completed,cancelled',
-        ]);
-
-        $appointment->update($validatedData);
-        if ($appointment) {
-            $data = [
-                'data' => $appointment,
-                'message' => 'Actualizado correctamente',
-            ];
-            return response()->json($data, 200);
-        } else {
-            $data = [
-                'data' => null,
-                'message' => 'Error al actualizar',
-            ];
-            return response()->json($data, 500);
-        }
+        try{
+            $validatedData = $request->validate([
+                'patient_name' => 'sometimes|required|string|max:255',
+                'doctor_name' => 'sometimes|required|string|max:255',
+                'appointment_date' => 'sometimes|required|date',
+                'status' => 'sometimes|required|string|in:scheduled,completed,cancelled',
+            ]);
+    
+            $appointment = $this->appointmentFactory->update($id, $validatedData);
+            if ($appointment) {
+                $data = [
+                    'data' => $appointment,
+                    'message' => 'Actualizado correctamente',
+                ];
+                return response()->json($data, 200);
+            } else {
+                $data = [
+                    'data' => null,
+                    'message' => 'Cita no encontrada',
+                ];
+                return response()->json($data, 404);
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error en Base de Datos'], 500);
+        } catch (\Exception $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error'], 500);
+        } 
     }
 
     /**
@@ -303,28 +330,28 @@ class AppointmentController extends Controller
      */
     public function destroy($id)
     {
-        $appointment = Appointment::find($id);
-        if (!$appointment) {
-            $data = [
-                'data' => null,
-                'message' => 'Cita no encontrada',
-            ];
-            return response()->json($data, 404);
-        }
-
-        $appointment->delete();
-        if($appointment) {
-            $data = [
-                'data' => null,
-                'message' => 'Eliminado correctamente',
-            ];
-            return response()->json($data, 200);
-        } else {
-            $data = [
-                'data' => null,
-                'message' => 'Error al eliminar',
-            ];
-            return response()->json($data, 500);
-        }
+        try{
+            $deleted = $this->appointmentFactory->delete($id);
+            if ($deleted) {
+                $data = [
+                    'data' => null,
+                    'message' => 'Eliminado correctamente',
+                ];
+                return response()->json($data, 200);
+            } else {
+                $data = [
+                    'data' => null,
+                    'message' => 'Cita no encontrada',
+                ];
+                return response()->json($data, 404);
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error en Base de Datos'], 500);
+        } catch (\Exception $e) {
+            \Log::error('Error appointments: '.$e->getMessage());
+            return response()->json(['error' => 'Ocurrió un error'], 500);
+        } 
+        
     }
 }

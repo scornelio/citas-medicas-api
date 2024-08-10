@@ -1,6 +1,6 @@
 # API de Gestión de Citas Médicas
 
-Este proyecto es una API en Laravel para la gestión de citas médicas. Permite crear, listar, actualizar y eliminar citas médicas.
+Este proyecto es una API en Laravel para la gestión de citas médicas. Permite crear, listar, actualizar y eliminar citas médicas. Se encuentra implementado los patrones Repository y Factory
 
 ## Requisitos
 
